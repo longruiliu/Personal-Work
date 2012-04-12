@@ -1,8 +1,8 @@
 #include"head.h"
 int listen_port;
 int send_port;
-char local_ip[20] = "192.169.1.1";
-char send_ip[20] = "192.168.1.2";
+char local_ip[IP_LEN] = "255.255.255.255";
+char send_ip[IP_LEN] = "255.255.255.254";
 
 int main()
 {

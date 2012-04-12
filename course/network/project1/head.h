@@ -17,8 +17,8 @@ using namespace std;
 
 extern int listen_port;             //the port host are listening
 extern int send_port;               //the port want to send message
-extern char local_ip[20];           //host ip
-extern char send_ip[20];            //the ip you want to send message
+extern char local_ip[IP_LEN];           //host ip
+extern char send_ip[IP_LEN];            //the ip you want to send message
 
 class trans
 {
