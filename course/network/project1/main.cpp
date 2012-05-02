@@ -1,25 +1,35 @@
 #include"head.h"
+
 int listen_port;
 int send_port;
-char local_ip[IP_LEN] = "255.255.255.255";
-char send_ip[IP_LEN] = "255.255.255.254";
+string local_ip;
+string send_ip;
+string smac;
+string dmac;
+string s_data;
+unsigned int total_frame;
+struct sockaddr_in send_addr;
+struct sockaddr_in rec_addr;
+char buf[MAXLENGTH];
 
 int main()
 {
-	listen_port = 8000;
-	send_port = 1234;
-	char d[] = "I am the king of the world!";
-	string data(d);
-	trans test1(data);
-	cout<<test1.val()<<endl;
-
-        IP test2(test1.val());
-
-	cout<<"test"<<endl;
-	test2.test();
-	printf("The length is:%d\n",test2.length());
-	printf("The data are:\n");
-	test2.print();
+	int choice = 0;
+	printf("Please choose your role:\n1..............sender\n2..............receiver\nother..........exit\n",&choice);
+	scanf("%d",&choice);
+	switch(choice)
+	{
+		case 1:
+		        init();
+			send_data();
+			break;
+		case 2:
+		        init();
+			rec_data();
+			break;
+		default:
+			break;
+	}
 
 	return 0;
 }
