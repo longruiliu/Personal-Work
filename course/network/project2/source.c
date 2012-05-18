@@ -4,11 +4,18 @@ char *check_tab(char *dip)
 {
 	static char first[IP_LEN + 1],second[IP_LEN + 1];
 	freopen("route.conf","r",stdin);
+
+	printf("The route table are:\n");
+	while (scanf("%s %s",first,second) == 2)
+		printf("%s            %s\n",first,second);
+
+	freopen("route.conf","r",stdin);
 	while (scanf("%s %s",first,second) == 2)
 	{
 		if (strcmp(dip,first) == 0)
 			break;
 	}
+	printf("Find the next hop:%s\n",second);
 	return second;
 }
 
@@ -109,7 +116,27 @@ void get_data(int listen_port)
 	while (read(connfd,data,LEN) > 0)
 	{
 		int length = strlen(data) + 1;
-		printf("The data are:\n");
+		char s_ip[IP_LEN + 1],d_ip[IP_LEN + 1];
+		memcpy(s_ip,data,IP_LEN);
+		memcpy(d_ip,data + IP_LEN,IP_LEN);
+		for (int i = 0;i < IP_LEN;i++)
+			if (s_ip[i] == '$')
+			{
+				s_ip[i] = '\0';
+				break;
+			}
+		s_ip[IP_LEN] = '\0';
+		for (int i = 0;i < IP_LEN;i++)
+			if (d_ip[i] == '$')
+			{
+				d_ip[i] = '\0';
+				break;
+			}
+		d_ip[IP_LEN] = '\0';
+		printf("**********source IP               destination IP***************\n");
+		printf("          %s               %s                            \n",s_ip,d_ip);
+
+		printf("The data are:");
 		for (int i = 2 * (IP_LEN + P_LEN);i < length;i++)
 			printf("%c",data[i]);
 		printf("\n");

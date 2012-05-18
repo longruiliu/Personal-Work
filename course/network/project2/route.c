@@ -20,15 +20,27 @@ int main()
 		printf("Route connect OK!\n");
 	while (read(connfd,data,LEN) > 0)
 	{
-		char tmp_ip[IP_LEN];
-		memcpy(tmp_ip,data + IP_LEN,IP_LEN);
+		char s_ip[IP_LEN + 1],d_ip[IP_LEN + 1];
+		memcpy(s_ip,data,IP_LEN);
+		memcpy(d_ip,data + IP_LEN,IP_LEN);
 		for (int i = 0;i < IP_LEN;i++)
-			if (tmp_ip[i] == '$')
+			if (s_ip[i] == '$')
 			{
-				tmp_ip[i] = '\0';
+				s_ip[i] = '\0';
 				break;
 			}
-		send_ip = check_tab(tmp_ip);//check the routing table.
+		s_ip[IP_LEN] = '\0';
+		for (int i = 0;i < IP_LEN;i++)
+			if (d_ip[i] == '$')
+			{
+				d_ip[i] = '\0';
+				break;
+			}
+		d_ip[IP_LEN] = '\0';
+		printf("**********source IP               destination IP***************\n");
+		printf("          %s               %s                            \n",s_ip,d_ip);
+
+		send_ip = check_tab(d_ip);//check the routing table.
 		if (strcmp(send_ip,"127.0.0.1") == 0)
 			send_data(data,send_ip,H_PORT);
 		else
