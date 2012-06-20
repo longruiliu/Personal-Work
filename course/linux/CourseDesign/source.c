@@ -101,40 +101,153 @@ void get_command()
 		printf("Can't find the command\n");
 }
 
-void interaction(int listen_port)
+int interaction(int listen_port,int *listenfd)
 {
-	int connfd,listenfd;
+	int connfd;
 	int power;
+	char buf[LEN];
 	int do_what;
-	listenfd = rec_connect(listen_port);
-	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
-	while (read(connfd,&do_what,sizeof(do_what)) > 0)
+
+	bzero(buf,LEN);
+	*listenfd = listen_connect(listen_port);
+	connfd = accept(*listenfd,(struct sockaddr*)NULL,NULL);
+	if (read(connfd,buf,LEN) > 0)
 	{
+		do_what = buf[0] - '0';
 		if (do_what == 1)
 		{
 			char user[STRING],passwd[STRING];
 			char one[STRING],two[STRING];
-			if (read(connfd,user,STRING)&&read(connfd,passwd,STRING))
+			int i,j;
+			for (i = 1;i < strlen(buf);i++)
 			{
-				FILE *fin;
-				int success = 0;
-				if ((fin = fopen("user.conf","r")) == NULL)
-				{
-					printf("Open file error\n");
+				if (buf[i] == '$')
 					break;
-				}
-				while (fscanf(fin,"%s %s %d",one,two,&power))
-					if (strcmp(user,one) == 0&&strcmp(passwd,two))
-						success = 1;
-				write(connfd,&success,sizeof(success));
-
+				user[i - 1] = buf[i];
 			}
-			else 
+			user[i - 1] = '\0';
+			for (j = 0;i < strlen(buf);i++,j++)
+				passwd[j] = buf[i + 1];
+			passwd[j] = '\0';	
+			FILE *fin;
+			int success = 0;
+			if ((fin = fopen("user.conf","r")) == NULL)
 			{
-				printf("get user error!\n");
-				break;
+				printf("Open file error\n");
+				return -1;
 			}
+			while (fscanf(fin,"%s %s %d",one,two,&power) == 3)
+				if (strcmp(user,one) == 0&&strcmp(passwd,two) == 0)
+					success = 1;
+			write(connfd,&success,sizeof(success));
 		}
 	}
-	return 0;
+	close(connfd);
+	return power;
+}
+void send_file(char send_ip[LEN],int send_port)
+{
+	char name[STRING];
+	int sendfd;
+	char buf[LEN];
+	FILE *fin = NULL;
+	printf("Please input the file name:");
+	scanf("%s",name);
+	bzero(buf,LEN);
+	buf[0] = '1';
+	strcpy(buf + 1,name);
+	
+	sendfd = send_connect(send_ip,send_port);
+	printf("I am here\n");
+	write(sendfd,buf,LEN);
+	close(sendfd);
+
+	sendfd = send_connect(send_ip,send_port);
+	fin = fopen(name,"rb");
+	if (fin == NULL)  
+        {  
+            printf("File:\t%s Not Found!\n",name);  
+        }  
+        else  
+        {  
+            bzero(buf, LEN);  
+            int length = 0;  
+            while( (length = fread(buf, sizeof(char),LEN, fin)) > 0)  
+            {  
+                printf("length = %d\n",length);  
+  
+                // 发送buf中的字符串到sendfd,实际上就是发送给服务器端 
+                if (send(sendfd, buf,length, 0) < 0)  
+                {  
+                    printf("Send File:\t%s Failed!\n",name);  
+                    break;  
+                }  
+  
+                bzero(buf, sizeof(buf));  
+            }  
+            fclose(fin);  
+            printf("File:\t%s Transfer Finished!\n",name); 
+	} 
+}
+
+void get_file(int listenfd,char filename[STRING])
+{
+	system("pwd");
+	printf("filename:%s",filename);
+	FILE *fout = fopen(filename,"wb");
+	char buf[LEN];
+	int connfd;
+    	int length = 0;  
+
+        bzero(buf, LEN);  
+	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
+    	while(length = recv(connfd, buf,LEN, 0)) 
+	{	
+        	if (length < 0)  
+        	{  
+			printf("Recieve Data From client Failed!\n");  
+			break;  
+		}
+  
+        	int write_length = fwrite(buf, sizeof(char), length,fout);  
+        	if (write_length < length)  
+        	{  
+            		printf("File:\t%s Write Failed!\n",filename);  
+            		break;  
+        	}  
+        	bzero(buf,LEN);  
+	}  
+  
+	printf("Recieve File:\t %s From client Finished!\n",filename);  
+  
+    	// 传输完毕，关闭socket  
+    	fclose(fout);  
+    	close(connfd);  
+}
+
+void get_client(int power,int listenfd)
+{
+	int connfd;
+	int do_what;
+	char buf[LEN];
+	char argument[STRING];
+	system("cd director");
+	bzero(buf,LEN);
+	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
+
+	while (read(connfd,buf,LEN) > 0)
+	{
+		do_what = buf[0] - '0';
+		for (int i = 1;i < strlen(buf);i++)
+		{
+			if (buf[i] == '$')
+				break;
+			argument[i - 1] = buf[i];
+		}
+		if (do_what == 1)
+		{
+			close(connfd);
+			get_file(listenfd,argument);
+		}
+	}
 }

@@ -11,6 +11,7 @@ void init()
 int main()
 {
 	int do_what;
+	int power;
 	while (1)
 	{
 		printf("Please choose what to do:\n1--------->create a new user\n2--------->start server\n3--------->input command\n4--------->exit\n");
@@ -22,7 +23,9 @@ int main()
 				break;
 			case 2:
 				init();
-				interaction(listen_port);
+				int listenfd;
+				power = interaction(listen_port,&listenfd);
+				get_client(power,listenfd);
 				break;
 			case 3:
 				get_command();
