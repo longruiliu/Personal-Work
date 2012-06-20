@@ -62,6 +62,146 @@ int listen_connect(int port)
 	return listenfd;
 }
 
+//client function.
+void c_send_file(char send_ip[LEN],int send_port)
+{
+	char name[STRING];
+	int sendfd;
+	char buf[LEN];
+	FILE *fin = NULL;
+	printf("Please input the file name:");
+	scanf("%s",name);
+	bzero(buf,LEN);
+	buf[0] = '1';
+	strcpy(buf + 1,name);
+	
+	sendfd = send_connect(send_ip,send_port);
+	write(sendfd,buf,LEN);
+	close(sendfd);
+
+	sendfd = send_connect(send_ip,send_port);
+	fin = fopen(name,"r");
+	if (fin == NULL)  
+        {  
+            printf("File:\t%s Not Found!\n",name);  
+        }  
+        else  
+        {  
+            bzero(buf, LEN);  
+            int length = 0;  
+            while( (length = fread(buf, sizeof(char),LEN, fin)) > 0)  
+            {  
+                printf("length = %d\n",length);  
+  
+                // 发送buf中的字符串到sendfd,实际上就是发送给服务器端 
+                if (write(sendfd, buf,length) < 0)  
+                {  
+                    printf("Send File:\t%s Failed!\n",name);  
+                    break;  
+                }  
+  
+                bzero(buf, sizeof(buf));  
+            }  
+            fclose(fin);  
+            printf("File:\t%s Transfer Finished!\n",name); 
+	    close(sendfd);
+	} 
+}
+
+void c_get_file(char send_ip[LEN],int send_port)
+{
+	char name[STRING];
+	int sendfd;
+	char buf[LEN];
+	FILE *fout = NULL;
+	int length;
+	printf("Please input the file name:");
+	scanf("%s",name);
+	bzero(buf,LEN);
+	buf[0] = '2';
+	strcpy(buf + 1,name);
+	
+	sendfd = send_connect(send_ip,send_port);
+	write(sendfd,buf,LEN);
+	close(sendfd);
+
+	sendfd = send_connect(send_ip,send_port);
+	fout = fopen(name,"w");
+	if (fout == NULL)  
+        {  
+            printf("File:\t%s Not Found!\n",name);  
+        }  
+        else  
+        {  
+		bzero(buf, LEN);  
+    		while(length = read(sendfd,buf,LEN)) 
+		{
+        		if (length < 0)  
+        		{	  
+				printf("Recieve Data From server Failed!\n");  
+				break;  
+			}
+  
+        		int write_length = fwrite(buf, sizeof(char), length,fout);
+        		if (write_length < length)  
+        		{	  
+            			printf("File:\t%s Write Failed!\n",name);  
+            			break;  
+        		}
+	        	fflush(fout);
+        		bzero(buf,LEN);  
+		}  
+  
+		printf("Recieve File:\t %s From client Finished!\n",name);
+	}	
+  
+    	// 传输完毕，关闭socket  
+    	fclose(fout);  
+    	close(sendfd);  
+}
+
+void list_file(char send_ip[LEN],int send_port)
+{
+	int sendfd;
+	char buf[LEN];
+	int length;
+	bzero(buf,LEN);
+	buf[0] = '3';
+	buf[1] = '.';
+	
+	sendfd = send_connect(send_ip,send_port);
+	write(sendfd,buf,LEN);
+	close(sendfd);
+
+	bzero(buf,LEN);
+	sendfd = send_connect(send_ip,send_port);
+	read(sendfd,buf,LEN);
+	length = strlen(buf);
+	for (int i = 0;i < length;i++)
+	{
+		if (buf[i] == '$')
+		{
+			printf("  ");
+			continue;
+		}
+		printf("%c",buf[i]);
+	}
+	printf("\n");
+	close(sendfd);
+}
+
+void c_end(char send_ip[LEN],int send_port)
+{
+	int sendfd;
+	char buf[LEN];
+	buf[0] = '5';
+	
+	sendfd = send_connect(send_ip,send_port);
+	write(sendfd,buf,LEN);
+	close(sendfd);
+}
+
+//server function
 void create_user()
 {
 	FILE *fin = NULL;
@@ -77,7 +217,6 @@ void create_user()
 	fprintf(fin,"%s %s %d\n",name,passwd,power);
 	fclose(fin);
 }
-
 void get_command()
 {
 	char command[STRING];
@@ -138,83 +277,37 @@ int interaction(int listen_port,int *listenfd)
 			}
 			while (fscanf(fin,"%s %s %d",one,two,&power) == 3)
 				if (strcmp(user,one) == 0&&strcmp(passwd,two) == 0)
-					success = 1;
+ 				success = 1;
 			write(connfd,&success,sizeof(success));
 		}
 	}
 	close(connfd);
 	return power;
 }
-void send_file(char send_ip[LEN],int send_port)
-{
-	char name[STRING];
-	int sendfd;
-	char buf[LEN];
-	FILE *fin = NULL;
-	printf("Please input the file name:");
-	scanf("%s",name);
-	bzero(buf,LEN);
-	buf[0] = '1';
-	strcpy(buf + 1,name);
-	
-	sendfd = send_connect(send_ip,send_port);
-	printf("I am here\n");
-	write(sendfd,buf,LEN);
-	close(sendfd);
 
-	sendfd = send_connect(send_ip,send_port);
-	fin = fopen(name,"rb");
-	if (fin == NULL)  
-        {  
-            printf("File:\t%s Not Found!\n",name);  
-        }  
-        else  
-        {  
-            bzero(buf, LEN);  
-            int length = 0;  
-            while( (length = fread(buf, sizeof(char),LEN, fin)) > 0)  
-            {  
-                printf("length = %d\n",length);  
-  
-                // 发送buf中的字符串到sendfd,实际上就是发送给服务器端 
-                if (send(sendfd, buf,length, 0) < 0)  
-                {  
-                    printf("Send File:\t%s Failed!\n",name);  
-                    break;  
-                }  
-  
-                bzero(buf, sizeof(buf));  
-            }  
-            fclose(fin);  
-            printf("File:\t%s Transfer Finished!\n",name); 
-	} 
-}
-
-void get_file(int listenfd,char filename[STRING])
+void s_get_file(int listenfd,char *filename)
 {
-	system("pwd");
-	printf("filename:%s",filename);
-	FILE *fout = fopen(filename,"wb");
+	FILE *fout = fopen(filename,"w");
 	char buf[LEN];
 	int connfd;
     	int length = 0;  
 
         bzero(buf, LEN);  
 	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
-    	while(length = recv(connfd, buf,LEN, 0)) 
-	{	
+    	while(length = read(connfd, buf,LEN)) 
+	{
         	if (length < 0)  
         	{  
 			printf("Recieve Data From client Failed!\n");  
 			break;  
 		}
   
-        	int write_length = fwrite(buf, sizeof(char), length,fout);  
+        	int write_length = fwrite(buf, sizeof(char), length,fout);
         	if (write_length < length)  
         	{  
             		printf("File:\t%s Write Failed!\n",filename);  
             		break;  
-        	}  
+        	}
         	bzero(buf,LEN);  
 	}  
   
@@ -225,29 +318,108 @@ void get_file(int listenfd,char filename[STRING])
     	close(connfd);  
 }
 
-void get_client(int power,int listenfd)
+void s_send_file(int listenfd,char *filename)
+{
+	FILE *fin = fopen(filename,"r");
+	char buf[LEN];
+	int connfd;
+    	int length = 0;  
+
+        bzero(buf, LEN);  
+	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
+
+        while( (length = fread(buf, sizeof(char),LEN, fin)) > 0)  
+        {  
+		printf("length = %d\n",length);  
+  
+                // 发送buf中的字符串到sendfd,实际上就是发送给服务器端 
+                if (write(connfd, buf,length) < 0)  
+                {  
+                    printf("Send File:\t%s Failed!\n",filename);  
+                    break;  
+                }  
+  
+                bzero(buf, sizeof(buf));  
+	}  
+        fclose(fin);  
+        printf("File:\t%s Transfer Finished!\n",filename); 
+	close(connfd);
+} 
+
+void list_reply(int listenfd,char *director)
+{
+	char buf[LEN];
+	int connfd;
+    	int length = 0;  
+	DIR *dirp;  
+    	struct dirent *direntp; 
+       	bzero(buf,LEN);
+    	dirp = opendir(director);  
+    	if(dirp != NULL)  
+    	{  
+        	while(1)  
+        	{  
+			direntp = readdir(dirp);  
+			if(direntp == NULL)  
+				break;  
+			else if(direntp->d_name[0] != '.') 
+			{
+				strcat(buf,direntp->d_name);
+			        buf[strlen(buf)] = '$';	
+			}
+		}  
+		closedir(dirp);  
+	}  
+	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
+	if (write(connfd,buf,strlen(buf)) < 0)
+		perror("Send list ERROR!\n");
+	close(connfd);
+}
+
+void s_get_client(int power,int listenfd)
 {
 	int connfd;
 	int do_what;
 	char buf[LEN];
 	char argument[STRING];
-	system("cd director");
 	bzero(buf,LEN);
 	connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
 
-	while (read(connfd,buf,LEN) > 0)
+	while (1)
 	{
+		if (read(connfd,buf,LEN) > 0)
+		{
+		int i;
 		do_what = buf[0] - '0';
-		for (int i = 1;i < strlen(buf);i++)
+		for (i = 1;i < strlen(buf);i++)
 		{
 			if (buf[i] == '$')
 				break;
 			argument[i - 1] = buf[i];
 		}
+		argument[i - 1] = '\0';
 		if (do_what == 1)
 		{
 			close(connfd);
-			get_file(listenfd,argument);
+			s_get_file(listenfd,argument);
 		}
+		else if (do_what == 2)
+		{
+			close(connfd);
+			s_send_file(listenfd,argument);
+		}
+		else if (do_what == 3)
+		{
+			close(connfd);
+			list_reply(listenfd,argument);	
+		}
+		else
+		{
+			close(connfd);
+			printf("Connect finished!\n");
+			exit(0);
+		}
+		}
+	        connfd = accept(listenfd,(struct sockaddr*)NULL,NULL);
 	}
 }

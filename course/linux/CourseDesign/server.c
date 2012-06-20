@@ -25,7 +25,7 @@ int main()
 				init();
 				int listenfd;
 				power = interaction(listen_port,&listenfd);
-				get_client(power,listenfd);
+				s_get_client(power,listenfd);
 				break;
 			case 3:
 				get_command();

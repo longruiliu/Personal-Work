@@ -44,9 +44,16 @@ int main()
 		printf("command:");
 		scanf("%s",command);
 		if (strcmp(command,"put") == 0)
-			send_file(send_ip,send_port);
+			c_send_file(send_ip,send_port);
+		else if (strcmp(command,"get") == 0)
+			c_get_file(send_ip,send_port);
+		else if (strcmp(command,"ls") == 0)
+			list_file(send_ip,send_port);
 		else if (strcmp(command,"quit") == 0)
+		{
+			c_end(send_ip,send_port);
 			break;
+		}
 	}
 	return 0;
 }
